@@ -15,8 +15,9 @@
   const maxFallSpeed = 700;
   const pipeWidth = 88;
   const pipeGap = 185;
-  const pipeSpawnEvery = 1.35;
   const pipeSpeed = 190;
+  const pipeSpacing = 250;
+  const pipeStartOffset = 260;
   const minTopHeight = 60;
   const minBottomHeight = 60;
   const minGapY = minTopHeight + pipeGap / 2;
@@ -24,7 +25,6 @@
 
   let state = STATE_READY;
   let lastTime = 0;
-  let spawnTimer = 0;
   let score = 0;
   let best = Number.parseInt(localStorage.getItem("flappy-best") || "0", 10);
 
@@ -60,15 +60,10 @@
     bird.vy = 0;
     bird.rotation = 0;
     bird.wingTick = 0;
-    spawnTimer = 0;
     score = 0;
     pipes.length = 0;
     for (let i = 0; i < 3; i += 1) {
-      pipes.push({
-        x: WORLD_WIDTH + 260 + i * 240,
-        gapY: randomGapY(),
-        passed: false,
-      });
+      spawnPipe(WORLD_WIDTH + pipeStartOffset + i * pipeSpacing);
     }
   }
 
@@ -122,9 +117,9 @@
     camera.cloudOffset = (camera.cloudOffset + pipeSpeed * 0.15 * dt) % WORLD_WIDTH;
   }
 
-  function spawnPipe() {
+  function spawnPipe(x) {
     pipes.push({
-      x: WORLD_WIDTH + pipeWidth,
+      x,
       gapY: randomGapY(),
       passed: false,
     });
@@ -143,12 +138,6 @@
       return;
     }
 
-    spawnTimer += dt;
-    if (spawnTimer >= pipeSpawnEvery) {
-      spawnTimer = 0;
-      spawnPipe();
-    }
-
     for (const pipe of pipes) {
       pipe.x -= pipeSpeed * dt;
 
@@ -164,6 +153,14 @@
 
     while (pipes.length && pipes[0].x + pipeWidth < -20) {
       pipes.shift();
+    }
+
+    let rightMostX = pipes.length
+      ? pipes[pipes.length - 1].x
+      : WORLD_WIDTH + pipeStartOffset - pipeSpacing;
+    while (rightMostX <= WORLD_WIDTH + pipeStartOffset) {
+      rightMostX += pipeSpacing;
+      spawnPipe(rightMostX);
     }
   }
 
@@ -373,7 +370,6 @@
   }
 
   function drawReadyOverlay() {
-    drawCenteredPanel(190, 110, 300, 180);
     drawText("GET READY", WORLD_WIDTH / 2, 260, 40);
     drawText("Press Space / Tap", WORLD_WIDTH / 2, 308, 24);
   }
