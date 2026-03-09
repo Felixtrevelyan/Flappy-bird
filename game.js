@@ -1,469 +1,330 @@
 (() => {
-  const canvas = document.getElementById("game");
-  const ctx = canvas.getContext("2d");
+  const now = new Date();
 
-  const WORLD_WIDTH = canvas.width;
-  const WORLD_HEIGHT = canvas.height;
-  const GROUND_HEIGHT = 120;
+  function patternFallback(total, direction) {
+    return {
+      "1D": {
+        total,
+        success: 52.4,
+        failure: 47.6,
+        avgMove: direction === "bullish" ? 0.25 : 0.27,
+        series: [41, 44, 45, 47, 46, 50, 52, 52],
+        rows: sampleRows(direction)
+      },
+      "3D": {
+        total,
+        success: 54.1,
+        failure: 45.9,
+        avgMove: direction === "bullish" ? 0.48 : 0.51,
+        series: [42, 45, 47, 49, 51, 53, 54, 54],
+        rows: sampleRows(direction)
+      },
+      "5D": {
+        total,
+        success: 56.5,
+        failure: 43.5,
+        avgMove: direction === "bullish" ? 0.74 : 0.73,
+        series: [43, 47, 50, 52, 54, 56, 57, 57],
+        rows: sampleRows(direction)
+      },
+      "10D": {
+        total,
+        success: 58.8,
+        failure: 41.2,
+        avgMove: direction === "bullish" ? 1.02 : 1.01,
+        series: [45, 49, 52, 54, 56, 58, 59, 59],
+        rows: sampleRows(direction)
+      }
+    };
+  }
 
-  const STATE_READY = "ready";
-  const STATE_PLAYING = "playing";
-  const STATE_GAME_OVER = "gameover";
+  function sampleRows(direction) {
+    const up = direction === "bullish";
+    return [
+      {
+        date: "2026-02-28",
+        direction: up ? "Long" : "Short",
+        entry: "2,041.20",
+        exit: "2,053.60",
+        outcome: "Success",
+        ret: up ? "+0.61%" : "+0.55%"
+      },
+      {
+        date: "2026-02-14",
+        direction: up ? "Long" : "Short",
+        entry: "2,018.90",
+        exit: "2,012.40",
+        outcome: "Failure",
+        ret: up ? "-0.32%" : "-0.28%"
+      },
+      {
+        date: "2026-01-29",
+        direction: up ? "Long" : "Short",
+        entry: "1,997.00",
+        exit: "2,007.90",
+        outcome: "Success",
+        ret: up ? "+0.55%" : "+0.48%"
+      },
+      {
+        date: "2026-01-11",
+        direction: up ? "Long" : "Short",
+        entry: "1,978.10",
+        exit: "1,971.30",
+        outcome: "Failure",
+        ret: up ? "-0.34%" : "-0.31%"
+      },
+      {
+        date: "2025-12-19",
+        direction: up ? "Long" : "Short",
+        entry: "1,955.40",
+        exit: "1,968.70",
+        outcome: "Success",
+        ret: up ? "+0.68%" : "+0.64%"
+      },
+      {
+        date: "2025-12-03",
+        direction: up ? "Long" : "Short",
+        entry: "1,942.80",
+        exit: "1,936.00",
+        outcome: "Failure",
+        ret: up ? "-0.35%" : "-0.30%"
+      }
+    ];
+  }
 
-  const gravity = 1500;
-  const flapVelocity = -430;
-  const maxFallSpeed = 700;
-  const pipeWidth = 88;
-  const pipeGap = 185;
-  const pipeSpeed = 190;
-  const pipeSpacing = 250;
-  const pipeStartOffset = 260;
-  const minTopHeight = 60;
-  const minBottomHeight = 60;
-  const minGapY = minTopHeight + pipeGap / 2;
-  const maxGapY = WORLD_HEIGHT - GROUND_HEIGHT - minBottomHeight - pipeGap / 2;
-
-  let state = STATE_READY;
-  let lastTime = 0;
-  let score = 0;
-  let best = Number.parseInt(localStorage.getItem("flappy-best") || "0", 10);
-
-  const bird = {
-    x: 140,
-    y: 300,
-    radius: 20,
-    vy: 0,
-    rotation: 0,
-    wingTick: 0,
+  const MOCK_DATA = {
+    XAUUSD: {
+      label: "Gold Spot",
+      window: "1995-01-01 to Present",
+      patterns: {
+        bullish_engulfing: patternFallback(214, "bullish"),
+        bearish_engulfing: patternFallback(198, "bearish"),
+        pin_bar: patternFallback(162, "bullish"),
+        inside_day: patternFallback(177, "bullish")
+      }
+    },
+    FTSE100: {
+      label: "FTSE 100 Index",
+      window: "1995-01-01 to Present",
+      patterns: {
+        bullish_engulfing: patternFallback(143, "bullish"),
+        bearish_engulfing: patternFallback(155, "bearish"),
+        pin_bar: patternFallback(208, "bullish"),
+        inside_day: patternFallback(232, "bullish")
+      }
+    },
+    EURUSD: {
+      label: "Euro / US Dollar",
+      window: "1999-01-01 to Present",
+      patterns: {
+        bullish_engulfing: patternFallback(324, "bullish"),
+        bearish_engulfing: patternFallback(316, "bearish"),
+        pin_bar: patternFallback(289, "bullish"),
+        inside_day: patternFallback(451, "bullish")
+      }
+    },
+    BTCUSD: {
+      label: "Bitcoin / US Dollar",
+      window: "2014-01-01 to Present",
+      patterns: {
+        bullish_engulfing: patternFallback(196, "bullish"),
+        bearish_engulfing: patternFallback(184, "bearish"),
+        pin_bar: patternFallback(232, "bullish"),
+        inside_day: patternFallback(274, "bullish")
+      }
+    }
   };
 
-  const camera = {
-    groundOffset: 0,
-    cloudOffset: 0,
-  };
-
-  /** @type {Array<{x:number, gapY:number, passed:boolean}>} */
-  const pipes = [];
-
-  function clamp(value, min, max) {
-    return Math.max(min, Math.min(max, value));
-  }
-
-  function randomGapY() {
-    return minGapY + Math.random() * (maxGapY - minGapY);
-  }
-
-  function resetRound() {
-    state = STATE_READY;
-    bird.x = 140;
-    bird.y = 300;
-    bird.vy = 0;
-    bird.rotation = 0;
-    bird.wingTick = 0;
-    score = 0;
-    pipes.length = 0;
-    for (let i = 0; i < 3; i += 1) {
-      spawnPipe(WORLD_WIDTH + pipeStartOffset + i * pipeSpacing);
+  function normalizeModelData(raw) {
+    if (!raw || typeof raw !== "object") {
+      return null;
     }
-  }
-
-  function startRound() {
-    if (state === STATE_READY) {
-      state = STATE_PLAYING;
-      flap();
+    if (raw.securities && typeof raw.securities === "object") {
+      return raw.securities;
     }
+    return raw;
   }
 
-  function flap() {
-    bird.vy = flapVelocity;
-    bird.wingTick = 0.1;
+  const externalData = normalizeModelData(window.MODEL_DATA);
+  const DATA = externalData && Object.keys(externalData).length ? externalData : MOCK_DATA;
+
+  const securitySelect = document.getElementById("security-select");
+  const patternSelect = document.getElementById("pattern-select");
+  const horizonSelect = document.getElementById("horizon-select");
+  const sampleSizeSlider = document.getElementById("sample-size");
+  const sampleOutput = document.getElementById("sample-output");
+  const showFailures = document.getElementById("show-failures");
+  const refreshBtn = document.getElementById("refresh-btn");
+  const feedStatus = document.getElementById("feed-status");
+
+  const selectionTitle = document.getElementById("selection-title");
+  const windowValue = document.getElementById("window-value");
+  const syncValue = document.getElementById("sync-value");
+  const metricTotal = document.getElementById("metric-total");
+  const metricSuccess = document.getElementById("metric-success");
+  const metricFailure = document.getElementById("metric-failure");
+  const metricMove = document.getElementById("metric-move");
+  const chartCaption = document.getElementById("chart-caption");
+  const trendLine = document.getElementById("trend-line");
+  const eventsBody = document.getElementById("events-body");
+
+  function toPatternTitle(patternKey) {
+    return patternKey
+      .split("_")
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
   }
 
-  function onActionInput() {
-    if (state === STATE_READY) {
-      startRound();
-      return;
-    }
-    if (state === STATE_PLAYING) {
-      flap();
-      return;
-    }
-    resetRound();
+  function setSelectOptions(selectEl, values, labelFn) {
+    selectEl.innerHTML = values
+      .map((value) => `<option value="${value}">${labelFn(value)}</option>`)
+      .join("");
   }
 
-  function updateBird(dt) {
-    if (state === STATE_READY) {
-      bird.wingTick += dt * 8;
-      bird.y = 300 + Math.sin(performance.now() / 220) * 10;
-      bird.rotation = Math.sin(performance.now() / 250) * 0.08;
-      return;
-    }
-
-    bird.vy = clamp(bird.vy + gravity * dt, -1000, maxFallSpeed);
-    bird.y += bird.vy * dt;
-    bird.wingTick += dt * 16;
-    bird.rotation = clamp((bird.vy / maxFallSpeed) * 1.2, -0.55, 1.2);
-
-    const floor = WORLD_HEIGHT - GROUND_HEIGHT - bird.radius;
-    if (bird.y > floor) {
-      bird.y = floor;
-      bird.vy = 0;
-      bird.rotation = 1.2;
-    }
+  function getSecurities() {
+    return Object.keys(DATA);
   }
 
-  function updateWorld(dt) {
-    camera.groundOffset = (camera.groundOffset + pipeSpeed * dt) % 48;
-    camera.cloudOffset = (camera.cloudOffset + pipeSpeed * 0.15 * dt) % WORLD_WIDTH;
+  function getPatterns(security) {
+    return Object.keys(DATA[security].patterns);
   }
 
-  function spawnPipe(x) {
-    pipes.push({
-      x,
-      gapY: randomGapY(),
-      passed: false,
-    });
+  function getHorizons(security, pattern) {
+    return Object.keys(DATA[security].patterns[pattern]);
   }
 
-  function circleRectCollide(cx, cy, cr, rx, ry, rw, rh) {
-    const nearestX = clamp(cx, rx, rx + rw);
-    const nearestY = clamp(cy, ry, ry + rh);
-    const dx = cx - nearestX;
-    const dy = cy - nearestY;
-    return dx * dx + dy * dy <= cr * cr;
+  function toTrendPoints(series) {
+    const points = series && series.length ? series : [45, 48, 50, 53, 55, 57, 58, 59];
+    const baseX = 40;
+    const step = 580 / (points.length - 1);
+    return points
+      .map((value, idx) => {
+        const x = baseX + idx * step;
+        const y = 235 - ((value - 35) / 35) * 190;
+        return `${x.toFixed(1)},${Math.max(35, Math.min(235, y)).toFixed(1)}`;
+      })
+      .join(" ");
   }
 
-  function updatePipes(dt) {
-    if (state !== STATE_PLAYING) {
-      return;
-    }
+  function updateRows(rows) {
+    const sourceRows = Array.isArray(rows) ? rows : [];
+    const showFailuresOn = showFailures.checked;
+    const filtered = showFailuresOn
+      ? sourceRows
+      : sourceRows.filter((row) => row.outcome === "Success");
 
-    for (const pipe of pipes) {
-      pipe.x -= pipeSpeed * dt;
-
-      if (!pipe.passed && pipe.x + pipeWidth < bird.x) {
-        pipe.passed = true;
-        score += 1;
-        if (score > best) {
-          best = score;
-          localStorage.setItem("flappy-best", String(best));
-        }
-      }
-    }
-
-    while (pipes.length && pipes[0].x + pipeWidth < -20) {
-      pipes.shift();
-    }
-
-    let rightMostX = pipes.length
-      ? pipes[pipes.length - 1].x
-      : WORLD_WIDTH + pipeStartOffset - pipeSpacing;
-    while (rightMostX <= WORLD_WIDTH + pipeStartOffset) {
-      rightMostX += pipeSpacing;
-      spawnPipe(rightMostX);
-    }
+    eventsBody.innerHTML = filtered
+      .map((row) => {
+        const success = row.outcome === "Success";
+        return `
+          <tr>
+            <td>${row.date || "--"}</td>
+            <td>${row.direction || "--"}</td>
+            <td>${row.entry || "--"}</td>
+            <td>${row.exit || "--"}</td>
+            <td><span class="badge ${success ? "success" : "failure"}">${row.outcome || "--"}</span></td>
+            <td class="${success ? "value-up" : "value-down"}">${row.ret || "--"}</td>
+          </tr>
+        `;
+      })
+      .join("");
   }
 
-  function checkCollisions() {
-    if (state !== STATE_PLAYING) {
-      return;
-    }
+  function applyView() {
+    const security = securitySelect.value;
+    const pattern = patternSelect.value;
+    const horizon = horizonSelect.value;
 
-    if (bird.y - bird.radius <= 0) {
-      bird.y = bird.radius;
-      bird.vy = 80;
-    }
+    const securityData = DATA[security];
+    const stats = securityData.patterns[pattern][horizon];
 
-    const floor = WORLD_HEIGHT - GROUND_HEIGHT;
-    if (bird.y + bird.radius >= floor) {
-      bird.y = floor - bird.radius;
-      endRound();
-      return;
-    }
+    selectionTitle.textContent = `${securityData.label || security} · ${toPatternTitle(pattern)} · ${horizon}`;
+    windowValue.textContent = securityData.window || "--";
+    syncValue.textContent = `${now.toISOString().slice(0, 10)} ${now.toTimeString().slice(0, 5)}`;
 
-    for (const pipe of pipes) {
-      const topHeight = pipe.gapY - pipeGap / 2;
-      const bottomY = pipe.gapY + pipeGap / 2;
-      const bottomHeight = floor - bottomY;
+    const minSample = Number(sampleSizeSlider.value);
+    const total = Number(stats.total || 0);
+    const tooSmall = total < minSample;
 
-      const hitTop = circleRectCollide(
-        bird.x,
-        bird.y,
-        bird.radius - 2,
-        pipe.x,
-        0,
-        pipeWidth,
-        topHeight
-      );
-      const hitBottom = circleRectCollide(
-        bird.x,
-        bird.y,
-        bird.radius - 2,
-        pipe.x,
-        bottomY,
-        pipeWidth,
-        bottomHeight
-      );
+    metricTotal.textContent = `${total}`;
+    metricSuccess.textContent = tooSmall ? "N/A" : `${Number(stats.success || 0).toFixed(1)}%`;
+    metricFailure.textContent = tooSmall ? "N/A" : `${Number(stats.failure || 0).toFixed(1)}%`;
+    metricMove.textContent = tooSmall ? "N/A" : `${Number(stats.avgMove || 0).toFixed(2)}%`;
 
-      if (hitTop || hitBottom) {
-        endRound();
-        return;
-      }
-    }
+    chartCaption.textContent = tooSmall
+      ? `Not shown: sample (${total}) is below threshold (${minSample})`
+      : `Model output for ${security} ${toPatternTitle(pattern)} ${horizon}`;
+
+    trendLine.setAttribute("points", toTrendPoints(stats.series));
+    trendLine.style.opacity = tooSmall ? "0.24" : "1";
+
+    updateRows(stats.rows);
   }
 
-  function endRound() {
-    if (state !== STATE_PLAYING) {
-      return;
-    }
-    state = STATE_GAME_OVER;
-    bird.vy = 0;
-    bird.rotation = 1.2;
+  function syncPatternOptions() {
+    const security = securitySelect.value;
+    const patterns = getPatterns(security);
+    const current = patternSelect.value;
+
+    setSelectOptions(patternSelect, patterns, toPatternTitle);
+    patternSelect.value = patterns.includes(current) ? current : patterns[0];
   }
 
-  function drawSky() {
-    const gradient = ctx.createLinearGradient(0, 0, 0, WORLD_HEIGHT);
-    gradient.addColorStop(0, "#5fd3ff");
-    gradient.addColorStop(0.65, "#8fe5ff");
-    gradient.addColorStop(1, "#d3f7ff");
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+  function syncHorizonOptions() {
+    const security = securitySelect.value;
+    const pattern = patternSelect.value;
+    const horizons = getHorizons(security, pattern);
+    const current = horizonSelect.value;
 
-    ctx.fillStyle = "rgba(255,255,255,0.85)";
-    const cloudX = -camera.cloudOffset;
-    for (let i = 0; i < 7; i += 1) {
-      const x = cloudX + i * 170;
-      const y = 90 + (i % 3) * 44;
-      drawCloud(x, y, 1 + (i % 2) * 0.25);
-    }
+    setSelectOptions(horizonSelect, horizons, (h) => h.replace("D", " Day"));
+    horizonSelect.value = horizons.includes(current) ? current : horizons[0];
   }
 
-  function drawCloud(x, y, scale) {
-    ctx.beginPath();
-    ctx.arc(x, y, 16 * scale, 0, Math.PI * 2);
-    ctx.arc(x + 18 * scale, y - 8 * scale, 20 * scale, 0, Math.PI * 2);
-    ctx.arc(x + 40 * scale, y, 17 * scale, 0, Math.PI * 2);
-    ctx.fill();
+  function initializeSelectors() {
+    const securities = getSecurities();
+    setSelectOptions(securitySelect, securities, (s) => DATA[s].label || s);
+    securitySelect.value = securities[0];
+    syncPatternOptions();
+    syncHorizonOptions();
   }
 
-  function drawPipes() {
-    const floor = WORLD_HEIGHT - GROUND_HEIGHT;
+  securitySelect.addEventListener("change", () => {
+    syncPatternOptions();
+    syncHorizonOptions();
+    applyView();
+  });
 
-    for (const pipe of pipes) {
-      const topHeight = pipe.gapY - pipeGap / 2;
-      const bottomY = pipe.gapY + pipeGap / 2;
-      const bottomHeight = floor - bottomY;
+  patternSelect.addEventListener("change", () => {
+    syncHorizonOptions();
+    applyView();
+  });
 
-      drawPipeSegment(pipe.x, 0, pipeWidth, topHeight, true);
-      drawPipeSegment(pipe.x, bottomY, pipeWidth, bottomHeight, false);
-    }
-  }
+  [horizonSelect, showFailures].forEach((el) => {
+    el.addEventListener("change", applyView);
+  });
 
-  function drawPipeSegment(x, y, width, height, capAtBottom) {
-    if (height <= 0) {
-      return;
-    }
+  sampleSizeSlider.addEventListener("input", () => {
+    sampleOutput.value = sampleSizeSlider.value;
+    applyView();
+  });
 
-    const capHeight = 28;
-    const bodyTop = capAtBottom ? y : y + capHeight;
-    const bodyHeight = height - capHeight;
+  refreshBtn.addEventListener("click", () => {
+    applyView();
+    refreshBtn.animate(
+      [
+        { transform: "translateY(0)", opacity: 1 },
+        { transform: "translateY(-2px)", opacity: 0.8 },
+        { transform: "translateY(0)", opacity: 1 }
+      ],
+      { duration: 320, easing: "ease-out" }
+    );
+  });
 
-    if (bodyHeight > 0) {
-      ctx.fillStyle = "#61c138";
-      ctx.fillRect(x, bodyTop, width, bodyHeight);
+  sampleOutput.value = sampleSizeSlider.value;
+  initializeSelectors();
+  applyView();
 
-      ctx.fillStyle = "#84df4f";
-      ctx.fillRect(x + 6, bodyTop + 6, width - 12, Math.max(0, bodyHeight - 12));
-    }
-
-    const capY = capAtBottom ? y + height - capHeight : y;
-    ctx.fillStyle = "#67ca3b";
-    ctx.fillRect(x - 6, capY, width + 12, capHeight);
-    ctx.fillStyle = "#90ea5d";
-    ctx.fillRect(x, capY + 5, width, capHeight - 9);
-
-    ctx.strokeStyle = "rgba(0,0,0,0.2)";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x - 6, capY, width + 12, capHeight);
-  }
-
-  function drawGround() {
-    const floorY = WORLD_HEIGHT - GROUND_HEIGHT;
-
-    ctx.fillStyle = "#cda05a";
-    ctx.fillRect(0, floorY, WORLD_WIDTH, GROUND_HEIGHT);
-
-    ctx.fillStyle = "#e6c177";
-    ctx.fillRect(0, floorY, WORLD_WIDTH, 22);
-
-    for (let i = -1; i <= Math.ceil(WORLD_WIDTH / 48) + 1; i += 1) {
-      const x = i * 48 - camera.groundOffset;
-      ctx.fillStyle = i % 2 ? "#d6ab62" : "#c9984d";
-      ctx.fillRect(x, floorY + 22, 48, 24);
-
-      ctx.fillStyle = "rgba(95, 62, 26, 0.2)";
-      ctx.fillRect(x, floorY + 46, 48, 2);
-    }
-
-    ctx.fillStyle = "#b77a35";
-    ctx.fillRect(0, WORLD_HEIGHT - 12, WORLD_WIDTH, 12);
-  }
-
-  function drawBird() {
-    ctx.save();
-    ctx.translate(bird.x, bird.y);
-    ctx.rotate(bird.rotation);
-
-    const wingOffset = Math.sin(bird.wingTick) * 10;
-
-    ctx.fillStyle = "#f7cb21";
-    ctx.beginPath();
-    ctx.arc(0, 0, bird.radius, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "#e4b71a";
-    ctx.beginPath();
-    ctx.ellipse(-2, 7, 12, 8, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "#ffe46a";
-    ctx.beginPath();
-    ctx.ellipse(-5, -3, 10, 8, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "#efb22c";
-    ctx.beginPath();
-    ctx.moveTo(6, 2);
-    ctx.lineTo(28, 9);
-    ctx.lineTo(8, 15);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.fillStyle = "#ffd533";
-    ctx.beginPath();
-    ctx.ellipse(-7, wingOffset * 0.3 + 2, 11, 8, -0.4, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "#fff";
-    ctx.beginPath();
-    ctx.arc(6, -5, 6, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "#000";
-    ctx.beginPath();
-    ctx.arc(8, -5, 2.3, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.restore();
-  }
-
-  function drawScore() {
-    ctx.save();
-    ctx.fillStyle = "#fff";
-    ctx.strokeStyle = "rgba(0,0,0,0.45)";
-    ctx.lineWidth = 7;
-    ctx.font = "bold 60px 'Trebuchet MS', sans-serif";
-    ctx.textAlign = "center";
-    ctx.strokeText(String(score), WORLD_WIDTH / 2, 110);
-    ctx.fillText(String(score), WORLD_WIDTH / 2, 110);
-    ctx.restore();
-  }
-
-  function drawReadyOverlay() {
-    drawText("GET READY", WORLD_WIDTH / 2, 260, 40);
-    drawText("Press Space / Tap", WORLD_WIDTH / 2, 308, 24);
-  }
-
-  function drawGameOverOverlay() {
-    drawCenteredPanel(130, 120, 340, 260);
-    drawText("GAME OVER", WORLD_WIDTH / 2, 212, 44);
-    drawText(`SCORE  ${score}`, WORLD_WIDTH / 2, 272, 28);
-    drawText(`BEST   ${best}`, WORLD_WIDTH / 2, 314, 28);
-    drawText("Press Space / Tap to restart", WORLD_WIDTH / 2, 360, 20);
-  }
-
-  function drawCenteredPanel(x, y, w, h) {
-    ctx.fillStyle = "rgba(253, 248, 222, 0.95)";
-    roundRect(ctx, x, y, w, h, 14);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(0,0,0,0.3)";
-    ctx.lineWidth = 3;
-    roundRect(ctx, x, y, w, h, 14);
-    ctx.stroke();
-  }
-
-  function drawText(text, x, y, size) {
-    ctx.save();
-    ctx.font = `bold ${size}px 'Trebuchet MS', sans-serif`;
-    ctx.textAlign = "center";
-    ctx.lineWidth = Math.max(2, size * 0.12);
-    ctx.strokeStyle = "rgba(0,0,0,0.4)";
-    ctx.fillStyle = "#ffffff";
-    ctx.strokeText(text, x, y);
-    ctx.fillText(text, x, y);
-    ctx.restore();
-  }
-
-  function roundRect(context, x, y, width, height, radius) {
-    const r = Math.min(radius, width / 2, height / 2);
-    context.beginPath();
-    context.moveTo(x + r, y);
-    context.arcTo(x + width, y, x + width, y + height, r);
-    context.arcTo(x + width, y + height, x, y + height, r);
-    context.arcTo(x, y + height, x, y, r);
-    context.arcTo(x, y, x + width, y, r);
-    context.closePath();
-  }
-
-  function draw() {
-    drawSky();
-    drawPipes();
-    drawGround();
-    drawBird();
-    drawScore();
-
-    if (state === STATE_READY) {
-      drawReadyOverlay();
-    } else if (state === STATE_GAME_OVER) {
-      drawGameOverOverlay();
-    }
-  }
-
-  function update(dt) {
-    updateWorld(dt);
-    updateBird(dt);
-    updatePipes(dt);
-    checkCollisions();
-  }
-
-  function tick(timestamp) {
-    if (!lastTime) {
-      lastTime = timestamp;
-    }
-    const dt = Math.min((timestamp - lastTime) / 1000, 0.04);
-    lastTime = timestamp;
-
-    update(dt);
-    draw();
-
-    requestAnimationFrame(tick);
-  }
-
-  function bindInputs() {
-    window.addEventListener("keydown", (event) => {
-      if (event.code === "Space" || event.code === "ArrowUp") {
-        event.preventDefault();
-        onActionInput();
-      }
-    });
-
-    canvas.addEventListener("pointerdown", (event) => {
-      event.preventDefault();
-      onActionInput();
-    });
-  }
-
-  bindInputs();
-  resetRound();
-  requestAnimationFrame(tick);
+  feedStatus.textContent = externalData
+    ? "Model feed: live file"
+    : "Model feed: simulated";
 })();
