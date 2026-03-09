@@ -3,11 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SignalScope | Pattern Probability Dashboard</title>
+    <title>tee-odds | Pattern Probability Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="style.css" />
@@ -23,10 +23,14 @@
           <span class="brand-mark" aria-hidden="true"></span>
           <div>
             <p class="eyebrow">Pattern Intelligence</p>
-            <h1>SignalScope</h1>
+            <h1>tee-odds</h1>
           </div>
         </div>
         <div class="topbar-right">
+          <div class="top-nav" aria-label="top navigation">
+            <button class="top-nav-btn is-active" type="button" id="markets-btn">Markets</button>
+            <button class="top-nav-btn" type="button" id="sessions-btn">Sessions</button>
+          </div>
           <span class="status-pill" id="feed-status">Model feed: simulated</span>
           <button class="ghost-btn" type="button" id="refresh-btn">Refresh View</button>
         </div>
@@ -82,12 +86,6 @@
               </select>
             </label>
 
-            <label class="field">
-              <span>Minimum Sample Size</span>
-              <input id="sample-size" name="sample-size" type="range" min="20" max="400" step="10" value="80" />
-              <output id="sample-output" for="sample-size">80</output>
-            </label>
-
             <label class="field toggle-field">
               <input id="show-failures" type="checkbox" checked />
               <span>Show failure diagnostics</span>
@@ -141,8 +139,8 @@
               <svg viewBox="0 0 640 260" role="img" aria-label="probability trend chart placeholder">
                 <defs>
                   <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stop-color="#1ed6a6" />
-                    <stop offset="100%" stop-color="#f7b84b" />
+                    <stop offset="0%" stop-color="#203A71" />
+                    <stop offset="100%" stop-color="#075C93" />
                   </linearGradient>
                 </defs>
                 <g class="grid-lines">

@@ -151,11 +151,11 @@
   const securitySelect = document.getElementById("security-select");
   const patternSelect = document.getElementById("pattern-select");
   const horizonSelect = document.getElementById("horizon-select");
-  const sampleSizeSlider = document.getElementById("sample-size");
-  const sampleOutput = document.getElementById("sample-output");
   const showFailures = document.getElementById("show-failures");
   const refreshBtn = document.getElementById("refresh-btn");
   const feedStatus = document.getElementById("feed-status");
+  const marketsBtn = document.getElementById("markets-btn");
+  const sessionsBtn = document.getElementById("sessions-btn");
 
   const selectionTitle = document.getElementById("selection-title");
   const windowValue = document.getElementById("window-value");
@@ -242,21 +242,16 @@
     windowValue.textContent = securityData.window || "--";
     syncValue.textContent = `${now.toISOString().slice(0, 10)} ${now.toTimeString().slice(0, 5)}`;
 
-    const minSample = Number(sampleSizeSlider.value);
     const total = Number(stats.total || 0);
-    const tooSmall = total < minSample;
-
     metricTotal.textContent = `${total}`;
-    metricSuccess.textContent = tooSmall ? "N/A" : `${Number(stats.success || 0).toFixed(1)}%`;
-    metricFailure.textContent = tooSmall ? "N/A" : `${Number(stats.failure || 0).toFixed(1)}%`;
-    metricMove.textContent = tooSmall ? "N/A" : `${Number(stats.avgMove || 0).toFixed(2)}%`;
+    metricSuccess.textContent = `${Number(stats.success || 0).toFixed(1)}%`;
+    metricFailure.textContent = `${Number(stats.failure || 0).toFixed(1)}%`;
+    metricMove.textContent = `${Number(stats.avgMove || 0).toFixed(2)}%`;
 
-    chartCaption.textContent = tooSmall
-      ? `Not shown: sample (${total}) is below threshold (${minSample})`
-      : `Model output for ${security} ${toPatternTitle(pattern)} ${horizon}`;
+    chartCaption.textContent = `Model output for ${security} ${toPatternTitle(pattern)} ${horizon}`;
 
     trendLine.setAttribute("points", toTrendPoints(stats.series));
-    trendLine.style.opacity = tooSmall ? "0.24" : "1";
+    trendLine.style.opacity = "1";
 
     updateRows(stats.rows);
   }
@@ -303,11 +298,6 @@
     el.addEventListener("change", applyView);
   });
 
-  sampleSizeSlider.addEventListener("input", () => {
-    sampleOutput.value = sampleSizeSlider.value;
-    applyView();
-  });
-
   refreshBtn.addEventListener("click", () => {
     applyView();
     refreshBtn.animate(
@@ -320,7 +310,14 @@
     );
   });
 
-  sampleOutput.value = sampleSizeSlider.value;
+  function setTopNav(active) {
+    marketsBtn.classList.toggle("is-active", active === "markets");
+    sessionsBtn.classList.toggle("is-active", active === "sessions");
+  }
+
+  marketsBtn.addEventListener("click", () => setTopNav("markets"));
+  sessionsBtn.addEventListener("click", () => setTopNav("sessions"));
+
   initializeSelectors();
   applyView();
 
