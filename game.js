@@ -1,161 +1,58 @@
 (() => {
   const now = new Date();
 
-  function patternFallback(total, direction) {
-    return {
-      "1D": {
-        total,
-        success: 52.4,
-        failure: 47.6,
-        avgMove: direction === "bullish" ? 0.25 : 0.27,
-        series: [41, 44, 45, 47, 46, 50, 52, 52],
-        rows: sampleRows(direction)
-      },
-      "3D": {
-        total,
-        success: 54.1,
-        failure: 45.9,
-        avgMove: direction === "bullish" ? 0.48 : 0.51,
-        series: [42, 45, 47, 49, 51, 53, 54, 54],
-        rows: sampleRows(direction)
-      },
-      "5D": {
-        total,
-        success: 56.5,
-        failure: 43.5,
-        avgMove: direction === "bullish" ? 0.74 : 0.73,
-        series: [43, 47, 50, 52, 54, 56, 57, 57],
-        rows: sampleRows(direction)
-      },
-      "10D": {
-        total,
-        success: 58.8,
-        failure: 41.2,
-        avgMove: direction === "bullish" ? 1.02 : 1.01,
-        series: [45, 49, 52, 54, 56, 58, 59, 59],
-        rows: sampleRows(direction)
-      }
-    };
-  }
-
   function sampleRows(direction) {
     const up = direction === "bullish";
     return [
-      {
-        date: "2026-02-28",
-        direction: up ? "Long" : "Short",
-        entry: "2,041.20",
-        exit: "2,053.60",
-        outcome: "Success",
-        ret: up ? "+0.61%" : "+0.55%"
-      },
-      {
-        date: "2026-02-14",
-        direction: up ? "Long" : "Short",
-        entry: "2,018.90",
-        exit: "2,012.40",
-        outcome: "Failure",
-        ret: up ? "-0.32%" : "-0.28%"
-      },
-      {
-        date: "2026-01-29",
-        direction: up ? "Long" : "Short",
-        entry: "1,997.00",
-        exit: "2,007.90",
-        outcome: "Success",
-        ret: up ? "+0.55%" : "+0.48%"
-      },
-      {
-        date: "2026-01-11",
-        direction: up ? "Long" : "Short",
-        entry: "1,978.10",
-        exit: "1,971.30",
-        outcome: "Failure",
-        ret: up ? "-0.34%" : "-0.31%"
-      },
-      {
-        date: "2025-12-19",
-        direction: up ? "Long" : "Short",
-        entry: "1,955.40",
-        exit: "1,968.70",
-        outcome: "Success",
-        ret: up ? "+0.68%" : "+0.64%"
-      },
-      {
-        date: "2025-12-03",
-        direction: up ? "Long" : "Short",
-        entry: "1,942.80",
-        exit: "1,936.00",
-        outcome: "Failure",
-        ret: up ? "-0.35%" : "-0.30%"
-      }
+      { date: "2026-02-28", direction: up ? "Long" : "Short", entry: "2,041.20", exit: "2,053.60", outcome: "Success", ret: up ? "+0.61%" : "+0.55%" },
+      { date: "2026-02-14", direction: up ? "Long" : "Short", entry: "2,018.90", exit: "2,012.40", outcome: "Failure", ret: up ? "-0.32%" : "-0.28%" },
+      { date: "2026-01-29", direction: up ? "Long" : "Short", entry: "1,997.00", exit: "2,007.90", outcome: "Success", ret: up ? "+0.55%" : "+0.48%" },
+      { date: "2026-01-11", direction: up ? "Long" : "Short", entry: "1,978.10", exit: "1,971.30", outcome: "Failure", ret: up ? "-0.34%" : "-0.31%" },
+      { date: "2025-12-19", direction: up ? "Long" : "Short", entry: "1,955.40", exit: "1,968.70", outcome: "Success", ret: up ? "+0.68%" : "+0.64%" },
+      { date: "2025-12-03", direction: up ? "Long" : "Short", entry: "1,942.80", exit: "1,936.00", outcome: "Failure", ret: up ? "-0.35%" : "-0.30%" }
     ];
   }
 
-  const MOCK_DATA = {
+  function block(total, success, failure, move, direction) {
+    return {
+      total,
+      success,
+      failure,
+      avgMove: move,
+      rows: sampleRows(direction)
+    };
+  }
+
+  const FALLBACK = {
     XAUUSD: {
-      label: "Gold Spot",
-      window: "1995-01-01 to Present",
+      label: "XAUUSD",
+      window: "2007-01-01 to Present",
       patterns: {
-        bullish_engulfing: patternFallback(214, "bullish"),
-        bearish_engulfing: patternFallback(198, "bearish"),
-        pin_bar: patternFallback(162, "bullish"),
-        inside_day: patternFallback(177, "bullish")
-      }
-    },
-    FTSE100: {
-      label: "FTSE 100 Index",
-      window: "1995-01-01 to Present",
-      patterns: {
-        bullish_engulfing: patternFallback(143, "bullish"),
-        bearish_engulfing: patternFallback(155, "bearish"),
-        pin_bar: patternFallback(208, "bullish"),
-        inside_day: patternFallback(232, "bullish")
-      }
-    },
-    EURUSD: {
-      label: "Euro / US Dollar",
-      window: "1999-01-01 to Present",
-      patterns: {
-        bullish_engulfing: patternFallback(324, "bullish"),
-        bearish_engulfing: patternFallback(316, "bearish"),
-        pin_bar: patternFallback(289, "bullish"),
-        inside_day: patternFallback(451, "bullish")
-      }
-    },
-    BTCUSD: {
-      label: "Bitcoin / US Dollar",
-      window: "2014-01-01 to Present",
-      patterns: {
-        bullish_engulfing: patternFallback(196, "bullish"),
-        bearish_engulfing: patternFallback(184, "bearish"),
-        pin_bar: patternFallback(232, "bullish"),
-        inside_day: patternFallback(274, "bullish")
+        bullish_engulfing: {
+          "1D": block(226, 82.3, 17.7, 0.01, "bullish"),
+          "3D": block(225, 68.9, 31.1, 0.08, "bullish"),
+          "5D": block(224, 61.2, 38.8, 0.17, "bullish")
+        },
+        bearish_engulfing: {
+          "1D": block(194, 79.9, 20.1, 0.02, "bearish"),
+          "3D": block(193, 66.8, 33.2, 0.07, "bearish"),
+          "5D": block(191, 60.7, 39.3, 0.14, "bearish")
+        }
       }
     }
   };
 
-  function normalizeModelData(raw) {
-    if (!raw || typeof raw !== "object") {
-      return null;
-    }
-    if (raw.securities && typeof raw.securities === "object") {
-      return raw.securities;
-    }
-    return raw;
-  }
-
-  const externalData = normalizeModelData(window.MODEL_DATA);
-  const DATA = externalData && Object.keys(externalData).length ? externalData : MOCK_DATA;
+  const DATA =
+    window.MODEL_DATA && typeof window.MODEL_DATA === "object" && Object.keys(window.MODEL_DATA).length
+      ? window.MODEL_DATA
+      : FALLBACK;
 
   const securitySelect = document.getElementById("security-select");
   const patternSelect = document.getElementById("pattern-select");
   const horizonSelect = document.getElementById("horizon-select");
-  const showFailures = document.getElementById("show-failures");
   const refreshBtn = document.getElementById("refresh-btn");
   const feedStatus = document.getElementById("feed-status");
-  const marketsBtn = document.getElementById("markets-btn");
-  const sessionsBtn = document.getElementById("sessions-btn");
+  const sideLinks = document.querySelectorAll(".side-link");
 
   const selectionTitle = document.getElementById("selection-title");
   const windowValue = document.getElementById("window-value");
@@ -165,69 +62,95 @@
   const metricFailure = document.getElementById("metric-failure");
   const metricMove = document.getElementById("metric-move");
   const chartCaption = document.getElementById("chart-caption");
-  const trendLine = document.getElementById("trend-line");
   const eventsBody = document.getElementById("events-body");
+  const candleSvg = document.getElementById("candle-svg");
 
-  function toPatternTitle(patternKey) {
-    return patternKey
+  function titleize(value) {
+    return value
       .split("_")
-      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .map((v) => v.charAt(0).toUpperCase() + v.slice(1))
       .join(" ");
   }
 
-  function setSelectOptions(selectEl, values, labelFn) {
-    selectEl.innerHTML = values
-      .map((value) => `<option value="${value}">${labelFn(value)}</option>`)
+  function setOptions(select, values, formatter) {
+    select.innerHTML = values
+      .map((value) => `<option value="${value}">${formatter(value)}</option>`)
       .join("");
   }
 
-  function getSecurities() {
-    return Object.keys(DATA);
-  }
-
-  function getPatterns(security) {
-    return Object.keys(DATA[security].patterns);
-  }
-
-  function getHorizons(security, pattern) {
-    return Object.keys(DATA[security].patterns[pattern]);
-  }
-
-  function toTrendPoints(series) {
-    const points = series && series.length ? series : [45, 48, 50, 53, 55, 57, 58, 59];
-    const baseX = 40;
-    const step = 580 / (points.length - 1);
-    return points
-      .map((value, idx) => {
-        const x = baseX + idx * step;
-        const y = 235 - ((value - 35) / 35) * 190;
-        return `${x.toFixed(1)},${Math.max(35, Math.min(235, y)).toFixed(1)}`;
-      })
-      .join(" ");
-  }
-
-  function updateRows(rows) {
-    const sourceRows = Array.isArray(rows) ? rows : [];
-    const showFailuresOn = showFailures.checked;
-    const filtered = showFailuresOn
-      ? sourceRows
-      : sourceRows.filter((row) => row.outcome === "Success");
-
-    eventsBody.innerHTML = filtered
+  function renderRows(rows) {
+    const safeRows = Array.isArray(rows) ? rows : [];
+    eventsBody.innerHTML = safeRows
       .map((row) => {
-        const success = row.outcome === "Success";
+        const ok = row.outcome === "Success";
         return `
           <tr>
             <td>${row.date || "--"}</td>
             <td>${row.direction || "--"}</td>
             <td>${row.entry || "--"}</td>
             <td>${row.exit || "--"}</td>
-            <td><span class="badge ${success ? "success" : "failure"}">${row.outcome || "--"}</span></td>
-            <td class="${success ? "value-up" : "value-down"}">${row.ret || "--"}</td>
+            <td><span class="badge ${ok ? "success" : "failure"}">${row.outcome || "--"}</span></td>
+            <td class="${ok ? "value-up" : "value-down"}">${row.ret || "--"}</td>
           </tr>
         `;
       })
       .join("");
+  }
+
+  function seeded(seed) {
+    let t = seed % 2147483647;
+    if (t <= 0) t += 2147483646;
+    return () => {
+      t = (t * 16807) % 2147483647;
+      return (t - 1) / 2147483646;
+    };
+  }
+
+  function renderCandles(stats) {
+    const width = 1100;
+    const height = 360;
+    const pad = 30;
+    const floor = height - pad;
+    const top = pad;
+    const bars = 36;
+    const gap = (width - pad * 2) / bars;
+    const bodyW = gap * 0.52;
+
+    const random = seeded(Number(stats.total || 0) + Math.round(Number(stats.success || 0) * 10));
+    let price = 100;
+
+    const parts = [];
+    for (let i = 0; i < 6; i += 1) {
+      const y = top + ((floor - top) / 5) * i;
+      parts.push(`<line x1="${pad}" y1="${y.toFixed(1)}" x2="${width - pad}" y2="${y.toFixed(1)}" stroke="rgba(142,164,204,0.18)" stroke-width="1"/>`);
+    }
+
+    for (let i = 0; i < bars; i += 1) {
+      const drift = (random() - 0.48) * 8;
+      const open = price;
+      const close = open + drift;
+      const wickUp = Math.max(open, close) + random() * 3.5;
+      const wickDown = Math.min(open, close) - random() * 3.5;
+      price = close;
+
+      const scale = 2.35;
+      const x = pad + i * gap + (gap - bodyW) / 2;
+      const yo = floor - open * scale;
+      const yc = floor - close * scale;
+      const ywHi = floor - wickUp * scale;
+      const ywLo = floor - wickDown * scale;
+      const up = close >= open;
+
+      const stroke = up ? "#43d9b7" : "#d76f8f";
+      const fill = up ? "rgba(67,217,183,0.62)" : "rgba(215,111,143,0.65)";
+      const y = Math.min(yo, yc);
+      const h = Math.max(2, Math.abs(yo - yc));
+
+      parts.push(`<line x1="${(x + bodyW / 2).toFixed(1)}" y1="${ywHi.toFixed(1)}" x2="${(x + bodyW / 2).toFixed(1)}" y2="${ywLo.toFixed(1)}" stroke="${stroke}" stroke-width="1.6"/>`);
+      parts.push(`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bodyW.toFixed(1)}" height="${h.toFixed(1)}" fill="${fill}" stroke="${stroke}" stroke-width="1" rx="1"/>`);
+    }
+
+    candleSvg.innerHTML = parts.join("");
   }
 
   function applyView() {
@@ -238,65 +161,64 @@
     const securityData = DATA[security];
     const stats = securityData.patterns[pattern][horizon];
 
-    selectionTitle.textContent = `${securityData.label || security} · ${toPatternTitle(pattern)} · ${horizon}`;
+    selectionTitle.textContent = `${securityData.label || security} · ${titleize(pattern)} · ${horizon}`;
     windowValue.textContent = securityData.window || "--";
     syncValue.textContent = `${now.toISOString().slice(0, 10)} ${now.toTimeString().slice(0, 5)}`;
 
-    const total = Number(stats.total || 0);
-    metricTotal.textContent = `${total}`;
+    metricTotal.textContent = `${Number(stats.total || 0)}`;
     metricSuccess.textContent = `${Number(stats.success || 0).toFixed(1)}%`;
     metricFailure.textContent = `${Number(stats.failure || 0).toFixed(1)}%`;
     metricMove.textContent = `${Number(stats.avgMove || 0).toFixed(2)}%`;
 
-    chartCaption.textContent = `Model output for ${security} ${toPatternTitle(pattern)} ${horizon}`;
-
-    trendLine.setAttribute("points", toTrendPoints(stats.series));
-    trendLine.style.opacity = "1";
-
-    updateRows(stats.rows);
+    chartCaption.textContent = `Model output for ${security} ${titleize(pattern)} ${horizon}`;
+    renderRows(stats.rows);
+    renderCandles(stats);
   }
 
-  function syncPatternOptions() {
+  function syncPatterns() {
     const security = securitySelect.value;
-    const patterns = getPatterns(security);
+    const patterns = Object.keys(DATA[security].patterns);
     const current = patternSelect.value;
-
-    setSelectOptions(patternSelect, patterns, toPatternTitle);
+    setOptions(patternSelect, patterns, titleize);
     patternSelect.value = patterns.includes(current) ? current : patterns[0];
   }
 
-  function syncHorizonOptions() {
+  function syncHorizons() {
     const security = securitySelect.value;
     const pattern = patternSelect.value;
-    const horizons = getHorizons(security, pattern);
+    const horizons = Object.keys(DATA[security].patterns[pattern]);
     const current = horizonSelect.value;
-
-    setSelectOptions(horizonSelect, horizons, (h) => h.replace("D", " Day"));
+    setOptions(horizonSelect, horizons, (h) => h.replace("D", " Day"));
     horizonSelect.value = horizons.includes(current) ? current : horizons[0];
   }
 
-  function initializeSelectors() {
-    const securities = getSecurities();
-    setSelectOptions(securitySelect, securities, (s) => DATA[s].label || s);
+  function init() {
+    const securities = Object.keys(DATA);
+    setOptions(securitySelect, securities, (s) => DATA[s].label || s);
     securitySelect.value = securities[0];
-    syncPatternOptions();
-    syncHorizonOptions();
+
+    syncPatterns();
+    syncHorizons();
+    applyView();
+
+    feedStatus.textContent =
+      window.MODEL_DATA && typeof window.MODEL_DATA === "object" && Object.keys(window.MODEL_DATA).length
+        ? "Model feed: live file"
+        : "Model feed: simulated";
   }
 
   securitySelect.addEventListener("change", () => {
-    syncPatternOptions();
-    syncHorizonOptions();
+    syncPatterns();
+    syncHorizons();
     applyView();
   });
 
   patternSelect.addEventListener("change", () => {
-    syncHorizonOptions();
+    syncHorizons();
     applyView();
   });
 
-  [horizonSelect, showFailures].forEach((el) => {
-    el.addEventListener("change", applyView);
-  });
+  horizonSelect.addEventListener("change", applyView);
 
   refreshBtn.addEventListener("click", () => {
     applyView();
@@ -310,18 +232,12 @@
     );
   });
 
-  function setTopNav(active) {
-    marketsBtn.classList.toggle("is-active", active === "markets");
-    sessionsBtn.classList.toggle("is-active", active === "sessions");
-  }
+  sideLinks.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      sideLinks.forEach((b) => b.classList.remove("is-active"));
+      btn.classList.add("is-active");
+    });
+  });
 
-  marketsBtn.addEventListener("click", () => setTopNav("markets"));
-  sessionsBtn.addEventListener("click", () => setTopNav("sessions"));
-
-  initializeSelectors();
-  applyView();
-
-  feedStatus.textContent = externalData
-    ? "Model feed: live file"
-    : "Model feed: simulated";
+  init();
 })();

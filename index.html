@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>tee-odds | Pattern Probability Dashboard</title>
+    <title>tee-odds Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -13,180 +13,110 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <div class="bg-grid" aria-hidden="true"></div>
-    <div class="bg-glow bg-glow-a" aria-hidden="true"></div>
-    <div class="bg-glow bg-glow-b" aria-hidden="true"></div>
-
-    <main class="app-shell">
-      <header class="topbar panel stagger" style="--stagger: 0">
+    <div class="app">
+      <aside class="sidebar">
         <div class="brand">
-          <span class="brand-mark" aria-hidden="true"></span>
+          <span class="brand-dot" aria-hidden="true"></span>
           <div>
-            <p class="eyebrow">Pattern Intelligence</p>
+            <p class="brand-sub">Trading Intelligence</p>
             <h1>tee-odds</h1>
           </div>
         </div>
-        <div class="topbar-right">
-          <div class="top-nav" aria-label="top navigation">
-            <button class="top-nav-btn is-active" type="button" id="markets-btn">Markets</button>
-            <button class="top-nav-btn" type="button" id="sessions-btn">Sessions</button>
-          </div>
-          <span class="status-pill" id="feed-status">Model feed: simulated</span>
-          <button class="ghost-btn" type="button" id="refresh-btn">Refresh View</button>
-        </div>
-      </header>
 
-      <section class="hero panel stagger" style="--stagger: 1">
-        <div>
-          <p class="eyebrow">Trading Pattern Dashboard</p>
-          <h2>Explore bullish and bearish pattern probabilities by security.</h2>
-          <p>
-            This interface is display-only. Connect your Python model output later via API or JSON.
-          </p>
-        </div>
-        <div class="hero-tags" aria-label="supported patterns">
-          <span>Bullish Engulfing</span>
-          <span>Bearish Engulfing</span>
-          <span>Pin Bar</span>
-          <span>Inside Day</span>
-        </div>
-      </section>
+        <nav class="side-nav" aria-label="Primary">
+          <button class="side-link is-active" data-section="markets" type="button">Markets</button>
+          <button class="side-link" data-section="sessions" type="button">Sessions</button>
+          <button class="side-link" data-section="regressions" type="button">Regressions</button>
+        </nav>
+      </aside>
 
-      <section class="layout-grid">
-        <aside class="controls panel stagger" style="--stagger: 2">
-          <h3>Query Controls</h3>
-          <form id="filters" autocomplete="off">
-            <label class="field">
-              <span>Security</span>
-              <select id="security-select" name="security">
-                <option value="XAUUSD">XAUUSD</option>
-                <option value="FTSE100">FTSE100</option>
-                <option value="EURUSD">EURUSD</option>
-                <option value="BTCUSD">BTCUSD</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Pattern</span>
-              <select id="pattern-select" name="pattern">
-                <option value="bullish_engulfing">Bullish Engulfing</option>
-                <option value="bearish_engulfing">Bearish Engulfing</option>
-                <option value="pin_bar">Pin Bar</option>
-                <option value="inside_day">Inside Day</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Holding Horizon</span>
-              <select id="horizon-select" name="horizon">
-                <option value="1D">1 Day</option>
-                <option value="3D">3 Days</option>
-                <option value="5D">5 Days</option>
-                <option value="10D">10 Days</option>
-              </select>
-            </label>
-
-            <label class="field toggle-field">
-              <input id="show-failures" type="checkbox" checked />
-              <span>Show failure diagnostics</span>
-            </label>
-          </form>
-        </aside>
-
-        <section class="results stagger" style="--stagger: 3">
-          <div class="panel heading-row">
-            <div>
-              <p class="eyebrow">Selection</p>
-              <h3 id="selection-title">XAUUSD · Bullish Engulfing · 5 Days</h3>
+      <main class="main">
+        <header class="topbar panel">
+          <div class="toolbar-row">
+            <div class="chip-group">
+              <label class="chip-select">
+                <span>Security</span>
+                <select id="security-select"></select>
+              </label>
+              <label class="chip-select">
+                <span>Pattern</span>
+                <select id="pattern-select"></select>
+              </label>
+              <label class="chip-select">
+                <span>Horizon</span>
+                <select id="horizon-select"></select>
+              </label>
             </div>
-            <div class="meta-grid">
-              <div>
-                <p class="meta-label">Data Window</p>
-                <p class="meta-value" id="window-value">1995-01-01 to Present</p>
-              </div>
-              <div>
-                <p class="meta-label">Last Sync</p>
-                <p class="meta-value" id="sync-value">--</p>
-              </div>
+
+            <div class="toolbar-right">
+              <span class="feed-pill" id="feed-status">Model feed: simulated</span>
+              <button class="refresh-btn" id="refresh-btn" type="button">Refresh</button>
             </div>
           </div>
 
-          <div class="metric-grid">
-            <article class="metric-card panel">
-              <p>Total Pattern Count</p>
-              <h4 id="metric-total">0</h4>
-            </article>
-            <article class="metric-card panel">
-              <p>Success Probability</p>
-              <h4 id="metric-success">0%</h4>
-            </article>
-            <article class="metric-card panel">
-              <p>Failure Probability</p>
-              <h4 id="metric-failure">0%</h4>
-            </article>
-            <article class="metric-card panel">
-              <p>Avg Directional Move</p>
-              <h4 id="metric-move">0.00%</h4>
-            </article>
+          <div class="status-strip">
+            <span class="status-tag">HEALTHY</span>
+            <p id="selection-title">XAUUSD · Bullish Engulfing · 5D</p>
+            <p class="status-meta" id="sync-value">--</p>
           </div>
+        </header>
 
-          <article class="panel chart-panel">
-            <div class="chart-header">
-              <h4>Probability Trend (Interface Placeholder)</h4>
-              <span id="chart-caption">No calculation performed in UI</span>
-            </div>
-            <div class="chart-visual" aria-hidden="true">
-              <svg viewBox="0 0 640 260" role="img" aria-label="probability trend chart placeholder">
-                <defs>
-                  <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stop-color="#203A71" />
-                    <stop offset="100%" stop-color="#075C93" />
-                  </linearGradient>
-                </defs>
-                <g class="grid-lines">
-                  <line x1="40" y1="35" x2="620" y2="35" />
-                  <line x1="40" y1="85" x2="620" y2="85" />
-                  <line x1="40" y1="135" x2="620" y2="135" />
-                  <line x1="40" y1="185" x2="620" y2="185" />
-                  <line x1="40" y1="235" x2="620" y2="235" />
-                </g>
-                <polyline
-                  id="trend-line"
-                  fill="none"
-                  stroke="url(#lineGrad)"
-                  stroke-width="4"
-                  stroke-linejoin="round"
-                  stroke-linecap="round"
-                  points="40,188 120,174 200,153 280,162 360,126 440,119 520,97 620,86"
-                />
-              </svg>
-            </div>
+        <section class="metrics">
+          <article class="metric panel">
+            <p>Total Patterns</p>
+            <h2 id="metric-total">0</h2>
           </article>
-
-          <article class="panel table-panel">
-            <div class="table-header">
-              <h4>Recent Pattern Events</h4>
-              <small>Static sample rows for layout testing</small>
-            </div>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Direction</th>
-                    <th>Entry</th>
-                    <th>Exit</th>
-                    <th>Outcome</th>
-                    <th>Return</th>
-                  </tr>
-                </thead>
-                <tbody id="events-body"></tbody>
-              </table>
-            </div>
+          <article class="metric panel">
+            <p>Success Probability</p>
+            <h2 id="metric-success">0%</h2>
+          </article>
+          <article class="metric panel">
+            <p>Failure Probability</p>
+            <h2 id="metric-failure">0%</h2>
+          </article>
+          <article class="metric panel">
+            <p>Avg Directional Move</p>
+            <h2 id="metric-move">0.00%</h2>
+          </article>
+          <article class="metric panel">
+            <p>Data Window</p>
+            <h2 id="window-value">--</h2>
           </article>
         </section>
-      </section>
-    </main>
+
+        <section class="chart-wrap panel">
+          <div class="chart-head">
+            <h3>Pattern Performance Timeline</h3>
+            <p id="chart-caption">Display-only chart based on selected model output</p>
+          </div>
+          <div class="chart-area">
+            <svg id="candle-svg" viewBox="0 0 1100 360" role="img" aria-label="Candlestick style placeholder chart"></svg>
+          </div>
+        </section>
+
+        <section class="table-wrap panel">
+          <div class="table-head">
+            <h3>Recent Pattern Events</h3>
+            <p>Most recent generated rows for selected pattern</p>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Direction</th>
+                  <th>Entry</th>
+                  <th>Exit</th>
+                  <th>Outcome</th>
+                  <th>Return</th>
+                </tr>
+              </thead>
+              <tbody id="events-body"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
 
     <script src="model-data.js"></script>
     <script src="game.js"></script>
