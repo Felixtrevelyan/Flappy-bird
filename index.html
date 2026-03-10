@@ -33,21 +33,6 @@
       <main class="main">
         <header class="topbar panel">
           <div class="toolbar-row">
-            <div class="chip-group">
-              <label class="chip-select">
-                <span>Security</span>
-                <select id="security-select"></select>
-              </label>
-              <label class="chip-select">
-                <span>Pattern</span>
-                <select id="pattern-select"></select>
-              </label>
-              <label class="chip-select">
-                <span>Horizon</span>
-                <select id="horizon-select"></select>
-              </label>
-            </div>
-
             <div class="toolbar-right">
               <span class="feed-pill" id="feed-status">Model feed: simulated</span>
               <button class="refresh-btn" id="refresh-btn" type="button">Refresh</button>
@@ -56,8 +41,29 @@
 
           <div class="status-strip">
             <span class="status-tag">HEALTHY</span>
-            <p id="selection-title">XAUUSD · Bullish Engulfing · 5D</p>
+            <p id="selection-title">XAUUSD · Bullish Engulfing · 1D · 5D</p>
             <p class="status-meta" id="sync-value">--</p>
+          </div>
+
+          <div class="controls-row">
+            <div class="chip-group">
+              <label class="chip-select">
+                <span>Market</span>
+                <select id="market-select"></select>
+              </label>
+              <label class="chip-select">
+                <span>Pattern</span>
+                <select id="pattern-select"></select>
+              </label>
+              <label class="chip-select">
+                <span>Timeframe</span>
+                <select id="timeframe-select"></select>
+              </label>
+              <label class="chip-select">
+                <span>Trade Duration</span>
+                <select id="duration-select"></select>
+              </label>
+            </div>
           </div>
         </header>
 
@@ -90,14 +96,14 @@
             <p id="chart-caption">Display-only chart based on selected model output</p>
           </div>
           <div class="chart-area">
-            <svg id="candle-svg" viewBox="0 0 1100 360" role="img" aria-label="Candlestick style placeholder chart"></svg>
+            <svg id="candle-svg" viewBox="0 0 940 230" role="img" aria-label="Candlestick style placeholder chart"></svg>
           </div>
         </section>
 
         <section class="table-wrap panel">
           <div class="table-head">
-            <h3>Recent Pattern Events</h3>
-            <p>Most recent generated rows for selected pattern</p>
+            <h3>Historical Pattern Events</h3>
+            <p>Historical rows from attached CSV, filtered by selected pattern and trade duration</p>
           </div>
           <div class="table-scroll">
             <table>

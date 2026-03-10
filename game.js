@@ -1,5 +1,6 @@
 (() => {
   const now = new Date();
+  const TIMEFRAMES = ["15m", "1H", "4H", "1D", "1W"];
 
   function sampleRows(direction) {
     const up = direction === "bullish";
@@ -47,9 +48,10 @@
       ? window.MODEL_DATA
       : FALLBACK;
 
-  const securitySelect = document.getElementById("security-select");
+  const marketSelect = document.getElementById("market-select");
   const patternSelect = document.getElementById("pattern-select");
-  const horizonSelect = document.getElementById("horizon-select");
+  const durationSelect = document.getElementById("duration-select");
+  const timeframeSelect = document.getElementById("timeframe-select");
   const refreshBtn = document.getElementById("refresh-btn");
   const feedStatus = document.getElementById("feed-status");
   const sideLinks = document.querySelectorAll(".side-link");
@@ -107,33 +109,33 @@
   }
 
   function renderCandles(stats) {
-    const width = 1100;
-    const height = 360;
-    const pad = 30;
+    const width = 940;
+    const height = 230;
+    const pad = 22;
     const floor = height - pad;
     const top = pad;
-    const bars = 36;
+    const bars = 24;
     const gap = (width - pad * 2) / bars;
-    const bodyW = gap * 0.52;
+    const bodyW = gap * 0.48;
 
     const random = seeded(Number(stats.total || 0) + Math.round(Number(stats.success || 0) * 10));
-    let price = 100;
+    let price = 46;
 
     const parts = [];
-    for (let i = 0; i < 6; i += 1) {
-      const y = top + ((floor - top) / 5) * i;
+    for (let i = 0; i < 5; i += 1) {
+      const y = top + ((floor - top) / 4) * i;
       parts.push(`<line x1="${pad}" y1="${y.toFixed(1)}" x2="${width - pad}" y2="${y.toFixed(1)}" stroke="rgba(142,164,204,0.18)" stroke-width="1"/>`);
     }
 
     for (let i = 0; i < bars; i += 1) {
-      const drift = (random() - 0.48) * 8;
+      const drift = (random() - 0.48) * 5;
       const open = price;
       const close = open + drift;
-      const wickUp = Math.max(open, close) + random() * 3.5;
-      const wickDown = Math.min(open, close) - random() * 3.5;
+      const wickUp = Math.max(open, close) + random() * 2.8;
+      const wickDown = Math.min(open, close) - random() * 2.8;
       price = close;
 
-      const scale = 2.35;
+      const scale = 2.45;
       const x = pad + i * gap + (gap - bodyW) / 2;
       const yo = floor - open * scale;
       const yc = floor - close * scale;
@@ -142,11 +144,11 @@
       const up = close >= open;
 
       const stroke = up ? "#43d9b7" : "#d76f8f";
-      const fill = up ? "rgba(67,217,183,0.62)" : "rgba(215,111,143,0.65)";
+      const fill = up ? "rgba(67,217,183,0.6)" : "rgba(215,111,143,0.63)";
       const y = Math.min(yo, yc);
       const h = Math.max(2, Math.abs(yo - yc));
 
-      parts.push(`<line x1="${(x + bodyW / 2).toFixed(1)}" y1="${ywHi.toFixed(1)}" x2="${(x + bodyW / 2).toFixed(1)}" y2="${ywLo.toFixed(1)}" stroke="${stroke}" stroke-width="1.6"/>`);
+      parts.push(`<line x1="${(x + bodyW / 2).toFixed(1)}" y1="${ywHi.toFixed(1)}" x2="${(x + bodyW / 2).toFixed(1)}" y2="${ywLo.toFixed(1)}" stroke="${stroke}" stroke-width="1.3"/>`);
       parts.push(`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bodyW.toFixed(1)}" height="${h.toFixed(1)}" fill="${fill}" stroke="${stroke}" stroke-width="1" rx="1"/>`);
     }
 
@@ -154,15 +156,16 @@
   }
 
   function applyView() {
-    const security = securitySelect.value;
+    const market = marketSelect.value;
     const pattern = patternSelect.value;
-    const horizon = horizonSelect.value;
+    const duration = durationSelect.value;
+    const timeframe = timeframeSelect.value;
 
-    const securityData = DATA[security];
-    const stats = securityData.patterns[pattern][horizon];
+    const marketData = DATA[market];
+    const stats = marketData.patterns[pattern][duration];
 
-    selectionTitle.textContent = `${securityData.label || security} · ${titleize(pattern)} · ${horizon}`;
-    windowValue.textContent = securityData.window || "--";
+    selectionTitle.textContent = `${marketData.label || market} · ${titleize(pattern)} · ${timeframe} · ${duration}`;
+    windowValue.textContent = marketData.window || "--";
     syncValue.textContent = `${now.toISOString().slice(0, 10)} ${now.toTimeString().slice(0, 5)}`;
 
     metricTotal.textContent = `${Number(stats.total || 0)}`;
@@ -170,35 +173,38 @@
     metricFailure.textContent = `${Number(stats.failure || 0).toFixed(1)}%`;
     metricMove.textContent = `${Number(stats.avgMove || 0).toFixed(2)}%`;
 
-    chartCaption.textContent = `Model output for ${security} ${titleize(pattern)} ${horizon}`;
+    chartCaption.textContent = `Model output for ${market} ${titleize(pattern)} · ${timeframe} · ${duration}`;
     renderRows(stats.rows);
     renderCandles(stats);
   }
 
   function syncPatterns() {
-    const security = securitySelect.value;
-    const patterns = Object.keys(DATA[security].patterns);
+    const market = marketSelect.value;
+    const patterns = Object.keys(DATA[market].patterns);
     const current = patternSelect.value;
     setOptions(patternSelect, patterns, titleize);
     patternSelect.value = patterns.includes(current) ? current : patterns[0];
   }
 
-  function syncHorizons() {
-    const security = securitySelect.value;
+  function syncDurations() {
+    const market = marketSelect.value;
     const pattern = patternSelect.value;
-    const horizons = Object.keys(DATA[security].patterns[pattern]);
-    const current = horizonSelect.value;
-    setOptions(horizonSelect, horizons, (h) => h.replace("D", " Day"));
-    horizonSelect.value = horizons.includes(current) ? current : horizons[0];
+    const durations = Object.keys(DATA[market].patterns[pattern]);
+    const current = durationSelect.value;
+    setOptions(durationSelect, durations, (h) => h.replace("D", " Day"));
+    durationSelect.value = durations.includes(current) ? current : durations[0];
   }
 
   function init() {
-    const securities = Object.keys(DATA);
-    setOptions(securitySelect, securities, (s) => DATA[s].label || s);
-    securitySelect.value = securities[0];
+    const markets = Object.keys(DATA);
+    setOptions(marketSelect, markets, (s) => DATA[s].label || s);
+    marketSelect.value = markets[0];
+
+    setOptions(timeframeSelect, TIMEFRAMES, (tf) => tf);
+    timeframeSelect.value = "1D";
 
     syncPatterns();
-    syncHorizons();
+    syncDurations();
     applyView();
 
     feedStatus.textContent =
@@ -207,18 +213,19 @@
         : "Model feed: simulated";
   }
 
-  securitySelect.addEventListener("change", () => {
+  marketSelect.addEventListener("change", () => {
     syncPatterns();
-    syncHorizons();
+    syncDurations();
     applyView();
   });
 
   patternSelect.addEventListener("change", () => {
-    syncHorizons();
+    syncDurations();
     applyView();
   });
 
-  horizonSelect.addEventListener("change", applyView);
+  durationSelect.addEventListener("change", applyView);
+  timeframeSelect.addEventListener("change", applyView);
 
   refreshBtn.addEventListener("click", () => {
     applyView();
