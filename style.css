@@ -149,7 +149,7 @@ h1 {
 
 .chip-group {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 0.55rem;
 }
 
@@ -165,13 +165,19 @@ h1 {
   color: var(--muted);
 }
 
-.chip-select select {
+.chip-select select,
+.chip-select input[type="date"] {
   border: 1px solid var(--line);
   border-radius: 9px;
   background: var(--panel-2);
   color: var(--text);
   padding: 0.48rem 0.56rem;
   font: inherit;
+}
+
+.chip-select input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.9) hue-rotate(170deg);
+  cursor: pointer;
 }
 
 .toolbar-right {
@@ -379,6 +385,12 @@ tr:last-child td {
 
 .value-down {
   color: var(--danger);
+}
+
+@media (max-width: 1360px) {
+  .chip-group {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 1240px) {

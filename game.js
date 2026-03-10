@@ -5,12 +5,9 @@
   function sampleRows(direction) {
     const up = direction === "bullish";
     return [
-      { date: "2026-02-28", direction: up ? "Long" : "Short", entry: "2,041.20", exit: "2,053.60", outcome: "Success", ret: up ? "+0.61%" : "+0.55%" },
-      { date: "2026-02-14", direction: up ? "Long" : "Short", entry: "2,018.90", exit: "2,012.40", outcome: "Failure", ret: up ? "-0.32%" : "-0.28%" },
-      { date: "2026-01-29", direction: up ? "Long" : "Short", entry: "1,997.00", exit: "2,007.90", outcome: "Success", ret: up ? "+0.55%" : "+0.48%" },
-      { date: "2026-01-11", direction: up ? "Long" : "Short", entry: "1,978.10", exit: "1,971.30", outcome: "Failure", ret: up ? "-0.34%" : "-0.31%" },
-      { date: "2025-12-19", direction: up ? "Long" : "Short", entry: "1,955.40", exit: "1,968.70", outcome: "Success", ret: up ? "+0.68%" : "+0.64%" },
-      { date: "2025-12-03", direction: up ? "Long" : "Short", entry: "1,942.80", exit: "1,936.00", outcome: "Failure", ret: up ? "-0.35%" : "-0.30%" }
+      { date: "2026-02-28", direction: up ? "Long" : "Short", entry: "--", exit: "--", outcome: "Success", ret: up ? "+0.61%" : "+0.55%", move: up ? 0.61 : 0.55 },
+      { date: "2026-02-14", direction: up ? "Long" : "Short", entry: "--", exit: "--", outcome: "Failure", ret: up ? "-0.32%" : "-0.28%", move: up ? -0.32 : -0.28 },
+      { date: "2026-01-29", direction: up ? "Long" : "Short", entry: "--", exit: "--", outcome: "Success", ret: up ? "+0.55%" : "+0.48%", move: up ? 0.55 : 0.48 }
     ];
   }
 
@@ -52,6 +49,8 @@
   const patternSelect = document.getElementById("pattern-select");
   const durationSelect = document.getElementById("duration-select");
   const timeframeSelect = document.getElementById("timeframe-select");
+  const dateFromInput = document.getElementById("date-from");
+  const dateToInput = document.getElementById("date-to");
   const refreshBtn = document.getElementById("refresh-btn");
   const feedStatus = document.getElementById("feed-status");
   const sideLinks = document.querySelectorAll(".side-link");
@@ -80,11 +79,34 @@
       .join("");
   }
 
+  function formatMove(value) {
+    const n = Number(value || 0);
+    return `${n >= 0 ? "+" : ""}${n.toFixed(2)}%`;
+  }
+
+  function parseDate(value) {
+    if (!value) return null;
+    const d = new Date(`${value}T00:00:00`);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  function inDateWindow(rowDate, fromValue, toValue) {
+    if (!rowDate) return false;
+    const d = parseDate(rowDate);
+    if (!d) return false;
+    const from = parseDate(fromValue);
+    const to = parseDate(toValue);
+    if (from && d < from) return false;
+    if (to && d > to) return false;
+    return true;
+  }
+
   function renderRows(rows) {
     const safeRows = Array.isArray(rows) ? rows : [];
     eventsBody.innerHTML = safeRows
       .map((row) => {
         const ok = row.outcome === "Success";
+        const ret = row.ret || formatMove(Number(row.move || 0));
         return `
           <tr>
             <td>${row.date || "--"}</td>
@@ -92,7 +114,7 @@
             <td>${row.entry || "--"}</td>
             <td>${row.exit || "--"}</td>
             <td><span class="badge ${ok ? "success" : "failure"}">${row.outcome || "--"}</span></td>
-            <td class="${ok ? "value-up" : "value-down"}">${row.ret || "--"}</td>
+            <td class="${Number(row.move || 0) >= 0 ? "value-up" : "value-down"}">${ret}</td>
           </tr>
         `;
       })
@@ -108,7 +130,7 @@
     };
   }
 
-  function renderCandles(stats) {
+  function renderCandles(seedStats) {
     const width = 940;
     const height = 230;
     const pad = 22;
@@ -118,7 +140,7 @@
     const gap = (width - pad * 2) / bars;
     const bodyW = gap * 0.48;
 
-    const random = seeded(Number(stats.total || 0) + Math.round(Number(stats.success || 0) * 10));
+    const random = seeded(Number(seedStats.total || 0) + Math.round(Number(seedStats.success || 0) * 10));
     let price = 46;
 
     const parts = [];
@@ -155,6 +177,15 @@
     candleSvg.innerHTML = parts.join("");
   }
 
+  function getDateBounds(rows) {
+    const dates = rows
+      .map((r) => r.date)
+      .filter(Boolean)
+      .sort();
+    if (!dates.length) return null;
+    return { min: dates[0], max: dates[dates.length - 1] };
+  }
+
   function applyView() {
     const market = marketSelect.value;
     const pattern = patternSelect.value;
@@ -163,19 +194,35 @@
 
     const marketData = DATA[market];
     const stats = marketData.patterns[pattern][duration];
+    const rows = Array.isArray(stats.rows) ? stats.rows : [];
+
+    const filtered = rows.filter((row) => inDateWindow(row.date, dateFromInput.value, dateToInput.value));
+
+    const total = filtered.length;
+    const successCount = filtered.filter((r) => r.outcome === "Success").length;
+    const successRate = total ? (successCount / total) * 100 : 0;
+    const failureRate = total ? 100 - successRate : 0;
+
+    const moves = filtered
+      .map((r) => Number(r.move))
+      .filter((n) => Number.isFinite(n));
+    const avgMove = moves.length ? moves.reduce((a, b) => a + b, 0) / moves.length : 0;
+
+    const fromTxt = dateFromInput.value || rows[rows.length - 1]?.date || "--";
+    const toTxt = dateToInput.value || rows[0]?.date || "--";
 
     selectionTitle.textContent = `${marketData.label || market} · ${titleize(pattern)} · ${timeframe} · ${duration}`;
-    windowValue.textContent = marketData.window || "--";
+    windowValue.textContent = `${fromTxt} to ${toTxt}`;
     syncValue.textContent = `${now.toISOString().slice(0, 10)} ${now.toTimeString().slice(0, 5)}`;
 
-    metricTotal.textContent = `${Number(stats.total || 0)}`;
-    metricSuccess.textContent = `${Number(stats.success || 0).toFixed(1)}%`;
-    metricFailure.textContent = `${Number(stats.failure || 0).toFixed(1)}%`;
-    metricMove.textContent = `${Number(stats.avgMove || 0).toFixed(2)}%`;
+    metricTotal.textContent = `${total}`;
+    metricSuccess.textContent = `${successRate.toFixed(1)}%`;
+    metricFailure.textContent = `${failureRate.toFixed(1)}%`;
+    metricMove.textContent = formatMove(avgMove);
 
-    chartCaption.textContent = `Model output for ${market} ${titleize(pattern)} · ${timeframe} · ${duration}`;
-    renderRows(stats.rows);
-    renderCandles(stats);
+    chartCaption.textContent = `Filtered output for ${market} ${titleize(pattern)} · ${timeframe} · ${duration}`;
+    renderRows(filtered);
+    renderCandles({ total, success: successRate });
   }
 
   function syncPatterns() {
@@ -195,6 +242,38 @@
     durationSelect.value = durations.includes(current) ? current : durations[0];
   }
 
+  function syncDateBounds(resetValues = false) {
+    const market = marketSelect.value;
+    const pattern = patternSelect.value;
+    const duration = durationSelect.value;
+    const rows = DATA[market].patterns[pattern][duration].rows || [];
+    const bounds = getDateBounds(rows);
+
+    if (!bounds) {
+      dateFromInput.min = "";
+      dateFromInput.max = "";
+      dateToInput.min = "";
+      dateToInput.max = "";
+      return;
+    }
+
+    dateFromInput.min = bounds.min;
+    dateFromInput.max = bounds.max;
+    dateToInput.min = bounds.min;
+    dateToInput.max = bounds.max;
+
+    if (resetValues || !dateFromInput.value || dateFromInput.value < bounds.min || dateFromInput.value > bounds.max) {
+      dateFromInput.value = bounds.min;
+    }
+    if (resetValues || !dateToInput.value || dateToInput.value < bounds.min || dateToInput.value > bounds.max) {
+      dateToInput.value = bounds.max;
+    }
+
+    if (dateFromInput.value > dateToInput.value) {
+      dateToInput.value = dateFromInput.value;
+    }
+  }
+
   function init() {
     const markets = Object.keys(DATA);
     setOptions(marketSelect, markets, (s) => DATA[s].label || s);
@@ -205,6 +284,7 @@
 
     syncPatterns();
     syncDurations();
+    syncDateBounds(true);
     applyView();
 
     feedStatus.textContent =
@@ -216,16 +296,36 @@
   marketSelect.addEventListener("change", () => {
     syncPatterns();
     syncDurations();
+    syncDateBounds(true);
     applyView();
   });
 
   patternSelect.addEventListener("change", () => {
     syncDurations();
+    syncDateBounds(true);
     applyView();
   });
 
-  durationSelect.addEventListener("change", applyView);
+  durationSelect.addEventListener("change", () => {
+    syncDateBounds(true);
+    applyView();
+  });
+
   timeframeSelect.addEventListener("change", applyView);
+
+  dateFromInput.addEventListener("change", () => {
+    if (dateToInput.value && dateFromInput.value > dateToInput.value) {
+      dateToInput.value = dateFromInput.value;
+    }
+    applyView();
+  });
+
+  dateToInput.addEventListener("change", () => {
+    if (dateFromInput.value && dateToInput.value < dateFromInput.value) {
+      dateFromInput.value = dateToInput.value;
+    }
+    applyView();
+  });
 
   refreshBtn.addEventListener("click", () => {
     applyView();
