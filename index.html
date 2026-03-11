@@ -100,11 +100,19 @@
 
         <section class="chart-wrap panel">
           <div class="chart-head">
-            <h3>Pattern Performance Timeline</h3>
-            <p id="chart-caption">Display-only chart based on selected model output</p>
+            <h3>Pattern Performance Distribution</h3>
+            <p id="chart-caption">Q-Q probability plot and histogram for filtered directional moves</p>
           </div>
-          <div class="chart-area">
-            <svg id="candle-svg" viewBox="0 0 940 230" role="img" aria-label="Candlestick style placeholder chart"></svg>
+
+          <div class="chart-grid">
+            <article class="plot-card">
+              <h4>Q-Q Probability Plot</h4>
+              <svg id="qq-svg" viewBox="0 0 440 210" role="img" aria-label="Q-Q probability plot"></svg>
+            </article>
+            <article class="plot-card">
+              <h4>Histogram</h4>
+              <svg id="hist-svg" viewBox="0 0 440 210" role="img" aria-label="Histogram of directional moves"></svg>
+            </article>
           </div>
         </section>
 

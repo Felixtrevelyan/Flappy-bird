@@ -1,25 +1,6 @@
 (() => {
   const now = new Date();
-  const TIMEFRAMES = ["15m", "1H", "4H", "1D", "1W"];
-
-  function sampleRows(direction) {
-    const up = direction === "bullish";
-    return [
-      { date: "2026-02-28", direction: up ? "Long" : "Short", entry: "--", exit: "--", outcome: "Success", ret: up ? "+0.61%" : "+0.55%", move: up ? 0.61 : 0.55 },
-      { date: "2026-02-14", direction: up ? "Long" : "Short", entry: "--", exit: "--", outcome: "Failure", ret: up ? "-0.32%" : "-0.28%", move: up ? -0.32 : -0.28 },
-      { date: "2026-01-29", direction: up ? "Long" : "Short", entry: "--", exit: "--", outcome: "Success", ret: up ? "+0.55%" : "+0.48%", move: up ? 0.55 : 0.48 }
-    ];
-  }
-
-  function block(total, success, failure, move, direction) {
-    return {
-      total,
-      success,
-      failure,
-      avgMove: move,
-      rows: sampleRows(direction)
-    };
-  }
+  const TIMEFRAMES = ["1D", "1W"];
 
   const FALLBACK = {
     XAUUSD: {
@@ -27,14 +8,14 @@
       window: "2007-01-01 to Present",
       patterns: {
         bullish_engulfing: {
-          "1D": block(226, 82.3, 17.7, 0.01, "bullish"),
-          "3D": block(225, 68.9, 31.1, 0.08, "bullish"),
-          "5D": block(224, 61.2, 38.8, 0.17, "bullish")
+          "1D": { total: 226, success: 82.3, failure: 17.7, avgMove: 0.01, rows: [] },
+          "3D": { total: 225, success: 68.9, failure: 31.1, avgMove: 0.16, rows: [] },
+          "5D": { total: 224, success: 61.2, failure: 38.8, avgMove: 0.36, rows: [] }
         },
         bearish_engulfing: {
-          "1D": block(194, 79.9, 20.1, 0.02, "bearish"),
-          "3D": block(193, 66.8, 33.2, 0.07, "bearish"),
-          "5D": block(191, 60.7, 39.3, 0.14, "bearish")
+          "1D": { total: 194, success: 79.9, failure: 20.1, avgMove: 0.16, rows: [] },
+          "3D": { total: 193, success: 66.8, failure: 33.2, avgMove: 0.16, rows: [] },
+          "5D": { total: 191, success: 60.7, failure: 39.3, avgMove: 0.18, rows: [] }
         }
       }
     }
@@ -64,7 +45,8 @@
   const metricMove = document.getElementById("metric-move");
   const chartCaption = document.getElementById("chart-caption");
   const eventsBody = document.getElementById("events-body");
-  const candleSvg = document.getElementById("candle-svg");
+  const qqSvg = document.getElementById("qq-svg");
+  const histSvg = document.getElementById("hist-svg");
 
   function titleize(value) {
     return value
@@ -121,60 +103,138 @@
       .join("");
   }
 
-  function seeded(seed) {
-    let t = seed % 2147483647;
-    if (t <= 0) t += 2147483646;
-    return () => {
-      t = (t * 16807) % 2147483647;
-      return (t - 1) / 2147483646;
-    };
+  function mean(values) {
+    return values.reduce((a, b) => a + b, 0) / values.length;
   }
 
-  function renderCandles(seedStats) {
-    const width = 940;
-    const height = 230;
-    const pad = 22;
-    const floor = height - pad;
-    const top = pad;
-    const bars = 24;
-    const gap = (width - pad * 2) / bars;
-    const bodyW = gap * 0.48;
+  function stdDev(values) {
+    if (values.length < 2) return 0;
+    const m = mean(values);
+    const variance = values.reduce((acc, v) => acc + (v - m) ** 2, 0) / (values.length - 1);
+    return Math.sqrt(variance);
+  }
 
-    const random = seeded(Number(seedStats.total || 0) + Math.round(Number(seedStats.success || 0) * 10));
-    let price = 46;
+  // Acklam inverse normal CDF approximation
+  function normInv(p) {
+    const a = [-39.6968302866538, 220.946098424521, -275.928510446969, 138.357751867269, -30.6647980661472, 2.50662827745924];
+    const b = [-54.4760987982241, 161.585836858041, -155.698979859887, 66.8013118877197, -13.2806815528857];
+    const c = [-0.00778489400243029, -0.322396458041136, -2.40075827716184, -2.54973253934373, 4.37466414146497, 2.93816398269878];
+    const d = [0.00778469570904146, 0.32246712907004, 2.445134137143, 3.75440866190742];
+    const plow = 0.02425;
+    const phigh = 1 - plow;
 
-    const parts = [];
-    for (let i = 0; i < 5; i += 1) {
-      const y = top + ((floor - top) / 4) * i;
-      parts.push(`<line x1="${pad}" y1="${y.toFixed(1)}" x2="${width - pad}" y2="${y.toFixed(1)}" stroke="rgba(142,164,204,0.18)" stroke-width="1"/>`);
+    if (p <= 0) return -Infinity;
+    if (p >= 1) return Infinity;
+
+    let q;
+    let r;
+    if (p < plow) {
+      q = Math.sqrt(-2 * Math.log(p));
+      return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
+        ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
     }
 
-    for (let i = 0; i < bars; i += 1) {
-      const drift = (random() - 0.48) * 5;
-      const open = price;
-      const close = open + drift;
-      const wickUp = Math.max(open, close) + random() * 2.8;
-      const wickDown = Math.min(open, close) - random() * 2.8;
-      price = close;
-
-      const scale = 2.45;
-      const x = pad + i * gap + (gap - bodyW) / 2;
-      const yo = floor - open * scale;
-      const yc = floor - close * scale;
-      const ywHi = floor - wickUp * scale;
-      const ywLo = floor - wickDown * scale;
-      const up = close >= open;
-
-      const stroke = up ? "#43d9b7" : "#d76f8f";
-      const fill = up ? "rgba(67,217,183,0.6)" : "rgba(215,111,143,0.63)";
-      const y = Math.min(yo, yc);
-      const h = Math.max(2, Math.abs(yo - yc));
-
-      parts.push(`<line x1="${(x + bodyW / 2).toFixed(1)}" y1="${ywHi.toFixed(1)}" x2="${(x + bodyW / 2).toFixed(1)}" y2="${ywLo.toFixed(1)}" stroke="${stroke}" stroke-width="1.3"/>`);
-      parts.push(`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bodyW.toFixed(1)}" height="${h.toFixed(1)}" fill="${fill}" stroke="${stroke}" stroke-width="1" rx="1"/>`);
+    if (p > phigh) {
+      q = Math.sqrt(-2 * Math.log(1 - p));
+      return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
+        ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
     }
 
-    candleSvg.innerHTML = parts.join("");
+    q = p - 0.5;
+    r = q * q;
+    return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q /
+      (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
+  }
+
+  function renderEmptyPlot(svgEl, message) {
+    svgEl.innerHTML = `
+      <rect x="0" y="0" width="440" height="210" fill="rgba(5,13,25,0.0)" />
+      <text x="220" y="110" fill="rgba(142,164,204,0.9)" font-size="13" text-anchor="middle">${message}</text>
+    `;
+  }
+
+  function renderQQPlot(moves) {
+    if (!moves || moves.length < 3) {
+      renderEmptyPlot(qqSvg, "Not enough data for Q-Q plot");
+      return;
+    }
+
+    const w = 440;
+    const h = 210;
+    const m = 30;
+    const sorted = [...moves].sort((a, b) => a - b);
+    const n = sorted.length;
+    const mu = mean(sorted);
+    const sd = stdDev(sorted) || 1;
+
+    const theoretical = sorted.map((_, i) => mu + sd * normInv((i + 0.5) / n));
+    const minVal = Math.min(...sorted, ...theoretical);
+    const maxVal = Math.max(...sorted, ...theoretical);
+    const span = maxVal - minVal || 1;
+
+    const sx = (x) => m + ((x - minVal) / span) * (w - 2 * m);
+    const sy = (y) => h - m - ((y - minVal) / span) * (h - 2 * m);
+
+    const pts = sorted
+      .map((y, i) => `<circle cx="${sx(theoretical[i]).toFixed(2)}" cy="${sy(y).toFixed(2)}" r="2.7" fill="#7bc3ff" />`)
+      .join("");
+
+    const ref = `<line x1="${sx(minVal)}" y1="${sy(minVal)}" x2="${sx(maxVal)}" y2="${sy(maxVal)}" stroke="rgba(67,217,183,0.7)" stroke-width="1.4" stroke-dasharray="4 4"/>`;
+
+    qqSvg.innerHTML = `
+      <rect x="0" y="0" width="${w}" height="${h}" fill="rgba(5,13,25,0.0)"/>
+      <line x1="${m}" y1="${h - m}" x2="${w - m}" y2="${h - m}" stroke="rgba(142,164,204,0.35)"/>
+      <line x1="${m}" y1="${m}" x2="${m}" y2="${h - m}" stroke="rgba(142,164,204,0.35)"/>
+      ${ref}
+      ${pts}
+      <text x="${w / 2}" y="${h - 8}" fill="rgba(142,164,204,0.8)" font-size="10" text-anchor="middle">Theoretical Quantiles</text>
+      <text x="12" y="${h / 2}" fill="rgba(142,164,204,0.8)" font-size="10" transform="rotate(-90 12 ${h / 2})" text-anchor="middle">Sample Quantiles</text>
+    `;
+  }
+
+  function renderHistogram(moves) {
+    if (!moves || moves.length < 2) {
+      renderEmptyPlot(histSvg, "Not enough data for histogram");
+      return;
+    }
+
+    const w = 440;
+    const h = 210;
+    const m = 30;
+    const min = Math.min(...moves);
+    const max = Math.max(...moves);
+    const bins = Math.max(6, Math.min(16, Math.round(Math.sqrt(moves.length))));
+    const width = max - min || 1;
+    const step = width / bins;
+    const counts = Array.from({ length: bins }, () => 0);
+
+    for (const v of moves) {
+      let idx = Math.floor((v - min) / step);
+      if (idx >= bins) idx = bins - 1;
+      if (idx < 0) idx = 0;
+      counts[idx] += 1;
+    }
+
+    const maxCount = Math.max(...counts, 1);
+    const bw = (w - 2 * m) / bins;
+
+    const bars = counts
+      .map((c, i) => {
+        const barH = (c / maxCount) * (h - 2 * m);
+        const x = m + i * bw + 1;
+        const y = h - m - barH;
+        return `<rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${(bw - 2).toFixed(2)}" height="${barH.toFixed(2)}" fill="rgba(7,92,147,0.72)" stroke="rgba(123,195,255,0.8)" stroke-width="0.8"/>`;
+      })
+      .join("");
+
+    histSvg.innerHTML = `
+      <rect x="0" y="0" width="${w}" height="${h}" fill="rgba(5,13,25,0.0)"/>
+      <line x1="${m}" y1="${h - m}" x2="${w - m}" y2="${h - m}" stroke="rgba(142,164,204,0.35)"/>
+      <line x1="${m}" y1="${m}" x2="${m}" y2="${h - m}" stroke="rgba(142,164,204,0.35)"/>
+      ${bars}
+      <text x="${w / 2}" y="${h - 8}" fill="rgba(142,164,204,0.8)" font-size="10" text-anchor="middle">Directional Move (%)</text>
+      <text x="12" y="${h / 2}" fill="rgba(142,164,204,0.8)" font-size="10" transform="rotate(-90 12 ${h / 2})" text-anchor="middle">Frequency</text>
+    `;
   }
 
   function getDateBounds(rows) {
@@ -220,9 +280,10 @@
     metricFailure.textContent = `${failureRate.toFixed(1)}%`;
     metricMove.textContent = formatMove(avgMove);
 
-    chartCaption.textContent = `Filtered output for ${market} ${titleize(pattern)} · ${timeframe} · ${duration}`;
+    chartCaption.textContent = `Distribution for ${market} ${titleize(pattern)} · ${duration} (${total} events)`;
     renderRows(filtered);
-    renderCandles({ total, success: successRate });
+    renderQQPlot(moves);
+    renderHistogram(moves);
   }
 
   function syncPatterns() {

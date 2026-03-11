@@ -75,7 +75,8 @@ body {
 
 h1,
 h2,
-h3 {
+h3,
+h4 {
   margin: 0;
 }
 
@@ -290,17 +291,32 @@ h1 {
   font-size: 0.75rem;
 }
 
-.chart-area {
+.chart-grid {
   margin-top: 0.45rem;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 0.25rem;
-  background: rgba(5, 13, 25, 0.93);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
 }
 
-#candle-svg {
+.plot-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(5, 13, 25, 0.93);
+  padding: 0.42rem;
+}
+
+.plot-card h4 {
+  font-size: 0.76rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.26rem;
+}
+
+#qq-svg,
+#hist-svg {
   width: 100%;
-  height: 195px;
+  height: 190px;
   display: block;
 }
 
@@ -435,7 +451,8 @@ tr:last-child td {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .chip-group {
+  .chip-group,
+  .chart-grid {
     grid-template-columns: 1fr;
   }
 }
